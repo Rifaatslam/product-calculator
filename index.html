@@ -2,98 +2,167 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🧮 Product Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product Calculator</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-    h1 {
-      text-align: center;
-    }
-    form {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-    }
-    input {
-      display: block;
-      margin-bottom: 10px;
-      padding: 10px;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px;
-      background: green;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .product {
-      background: white;
-      padding: 15px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: auto; padding: 20px; }
+    input, button { padding: 8px; margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    tr.sold { background-color: #f9d6d5; }
   </style>
 </head>
 <body>
 
-  <h1>🧮 Product Calculator</h1>
+  <h1>Product Calculator</h1>
 
-  <form id="productForm">
-    <input type="text" id="name" placeholder="Product Name" required />
-    <input type="number" id="price" placeholder="Price" required />
-    <input type="number" id="quantity" placeholder="Quantity" required />
-    <button type="submit">Add Product</button>
-  </form>
+  <h2>Add New Product</h2>
+  <input type="text" id="name" placeholder="Product Name" />
+  <input type="number" id="price" placeholder="Price" />
+  <input type="number" id="quantity" placeholder="Quantity" />
+  <button onclick="addProduct()">Add Product</button>
 
-  <div id="products"></div>
+  <h2>Product List</h2>
+  <table id="productTable">
+    <thead>
+      <tr>
+        <th>Name</th><th>Price</th><th>Quantity</th><th>Total</th><th>Sell Note</th><th>Sell Date</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <script>
-    const API = 'https://product-calculator-1-wopp.onrender.com/api/products';
+  <h2>Edit Product</h2>
+  <input type="hidden" id="editId" />
+  <input type="text" id="editName" placeholder="Product Name" />
+  <input type="number" id="editPrice" placeholder="Price" />
+  <input type="number" id="editQuantity" placeholder="Quantity" />
+  <button onclick="updateProduct()">Update Product</button>
 
-    async function fetchProducts() {
-      const res = await fetch(API);
-      const data = await res.json();
-      const productsDiv = document.getElementById("products");
-      productsDiv.innerHTML = '';
-      data.forEach(p => {
-        const div = document.createElement("div");
-        div.className = 'product';
-        div.innerHTML = `
-          <strong>${p.name}</strong><br>
-          Price: ${p.price} | Qty: ${p.quantity} | Total: ${p.total}
-        `;
-        productsDiv.appendChild(div);
-      });
-    }
+  <h2>Sell Product</h2>
+  <input type="hidden" id="sellId" />
+  <input type="text" id="sellNote" placeholder="Sell Note" />
+  <button onclick="sellProduct()">Sell Product</button>
 
-    document.getElementById("productForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("name").value;
-      const price = document.getElementById("price").value;
-      const quantity = document.getElementById("quantity").value;
+<script>
+const apiBase = '/api/products';
 
-      await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, price, quantity }),
-      });
+async function fetchProducts() {
+  const res = await fetch(apiBase);
+  const products = await res.json();
+  const tbody = document.querySelector("#productTable tbody");
+  tbody.innerHTML = "";
+  products.forEach(p => {
+    const tr = document.createElement("tr");
+    if(p.sold) tr.classList.add("sold");
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td>${p.price}</td>
+      <td>${p.quantity}</td>
+      <td>${p.total}</td>
+      <td>${p.sellNote || ""}</td>
+      <td>${p.sellDate ? new Date(p.sellDate).toLocaleString() : ""}</td>
+      <td>
+        <button onclick="startEdit('${p._id}', '${p.name}', ${p.price}, ${p.quantity})">Edit</button>
+        <button onclick="startSell('${p._id}')">Sell</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
 
-      e.target.reset();
-      fetchProducts();
-    });
-
+async function addProduct() {
+  const name = document.getElementById("name").value.trim();
+  const price = Number(document.getElementById("price").value);
+  const quantity = Number(document.getElementById("quantity").value);
+  if (!name || price <= 0 || quantity <= 0) {
+    alert("Please enter valid name, price and quantity.");
+    return;
+  }
+  const res = await fetch(apiBase, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ name, price, quantity })
+  });
+  if (res.ok) {
+    alert("Product added");
+    document.getElementById("name").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("quantity").value = "";
     fetchProducts();
-  </script>
+  } else {
+    alert("Failed to add product");
+  }
+}
+
+function startEdit(id, name, price, quantity) {
+  document.getElementById("editId").value = id;
+  document.getElementById("editName").value = name;
+  document.getElementById("editPrice").value = price;
+  document.getElementById("editQuantity").value = quantity;
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function updateProduct() {
+  const id = document.getElementById("editId").value;
+  const name = document.getElementById("editName").value.trim();
+  const price = Number(document.getElementById("editPrice").value);
+  const quantity = Number(document.getElementById("editQuantity").value);
+  if (!id || !name || price <= 0 || quantity <= 0) {
+    alert("Please fill valid data to update");
+    return;
+  }
+  const res = await fetch(`${apiBase}/${id}`, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ name, price, quantity })
+  });
+  if (res.ok) {
+    alert("Product updated");
+    document.getElementById("editId").value = "";
+    document.getElementById("editName").value = "";
+    document.getElementById("editPrice").value = "";
+    document.getElementById("editQuantity").value = "";
+    fetchProducts();
+  } else {
+    alert("Update failed");
+  }
+}
+
+function startSell(id) {
+  document.getElementById("sellId").value = id;
+  document.getElementById("sellNote").value = "";
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function sellProduct() {
+  const id = document.getElementById("sellId").value;
+  const sellNote = document.getElementById("sellNote").value.trim();
+
+  if (!id) {
+    alert("Select a product to sell");
+    return;
+  }
+
+  const res = await fetch(`${apiBase}/${id}/sell`, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ sellNote })
+  });
+
+  if (res.ok) {
+    alert("Product sold");
+    document.getElementById("sellId").value = "";
+    document.getElementById("sellNote").value = "";
+    fetchProducts();
+  } else {
+    alert("Sell failed");
+  }
+}
+
+// প্রথমে লোড হওয়ার সময় প্রোডাক্টগুলো দেখাবে
+fetchProducts();
+</script>
 
 </body>
 </html>
