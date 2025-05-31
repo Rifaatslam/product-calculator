@@ -1,166 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Product Calculator</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: auto; padding: 20px; }
-    input, button { padding: 8px; margin: 5px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    tr.sold { background-color: #f9d6d5; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Product Calculator</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; }
+  input, button, textarea { padding: 8px; margin: 5px 0; width: 100%; }
+  ul { list-style: none; padding: 0; }
+  li { background: #f1f1f1; margin-bottom: 8px; padding: 10px; border-radius: 5px; }
+  .sold { background: #d4edda; }
+</style>
 </head>
 <body>
 
-  <h1>Product Calculator</h1>
+<h1>Product Calculator</h1>
 
-  <h2>Add New Product</h2>
-  <input type="text" id="name" placeholder="Product Name" />
-  <input type="number" id="price" placeholder="Price" />
-  <input type="number" id="quantity" placeholder="Quantity" />
-  <button onclick="addProduct()">Add Product</button>
+<form id="productForm">
+  <input type="text" id="name" placeholder="Product Name" required />
+  <input type="number" id="price" placeholder="Price" required />
+  <input type="number" id="quantity" placeholder="Quantity" required />
+  <button type="submit">Add Product</button>
+</form>
 
-  <h2>Product List</h2>
-  <table id="productTable">
-    <thead>
-      <tr>
-        <th>Name</th><th>Price</th><th>Quantity</th><th>Total</th><th>Sell Note</th><th>Sell Date</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<hr>
 
-  <h2>Edit Product</h2>
-  <input type="hidden" id="editId" />
-  <input type="text" id="editName" placeholder="Product Name" />
-  <input type="number" id="editPrice" placeholder="Price" />
-  <input type="number" id="editQuantity" placeholder="Quantity" />
-  <button onclick="updateProduct()">Update Product</button>
-
-  <h2>Sell Product</h2>
-  <input type="hidden" id="sellId" />
-  <input type="text" id="sellNote" placeholder="Sell Note" />
-  <button onclick="sellProduct()">Sell Product</button>
+<ul id="productsList"></ul>
 
 <script>
-const apiBase = '/api/products';
+const apiUrl = "https://product-calculator-1-wopp.onrender.com/api/products";
 
 async function fetchProducts() {
-  const res = await fetch(apiBase);
+  const res = await fetch(apiUrl);
   const products = await res.json();
-  const tbody = document.querySelector("#productTable tbody");
-  tbody.innerHTML = "";
+  const list = document.getElementById("productsList");
+  list.innerHTML = "";
+
   products.forEach(p => {
-    const tr = document.createElement("tr");
-    if(p.sold) tr.classList.add("sold");
-    tr.innerHTML = `
-      <td>${p.name}</td>
-      <td>${p.price}</td>
-      <td>${p.quantity}</td>
-      <td>${p.total}</td>
-      <td>${p.sellNote || ""}</td>
-      <td>${p.sellDate ? new Date(p.sellDate).toLocaleString() : ""}</td>
-      <td>
-        <button onclick="startEdit('${p._id}', '${p.name}', ${p.price}, ${p.quantity})">Edit</button>
-        <button onclick="startSell('${p._id}')">Sell</button>
-      </td>
+    const li = document.createElement("li");
+    li.className = p.sold ? "sold" : "";
+    li.innerHTML = `
+      <strong>${p.name}</strong><br />
+      Price: ${p.price} | Quantity: ${p.quantity} | Total: ${p.total}<br />
+      Created: ${new Date(p.createdAt).toLocaleString()}<br />
+      ${p.sold ? `<em>Sold on: ${new Date(p.sellDate).toLocaleString()}</em><br />Note: ${p.sellNote || "-"}` : ""}
+      <button onclick="editProduct('${p._id}', '${p.name}', ${p.price}, ${p.quantity})">Edit</button>
+      ${!p.sold ? `<button onclick="sellProduct('${p._id}')">Sell</button>` : ""}
     `;
-    tbody.appendChild(tr);
+    list.appendChild(li);
   });
 }
 
-async function addProduct() {
+document.getElementById("productForm").addEventListener("submit", async e => {
+  e.preventDefault();
   const name = document.getElementById("name").value.trim();
-  const price = Number(document.getElementById("price").value);
-  const quantity = Number(document.getElementById("quantity").value);
-  if (!name || price <= 0 || quantity <= 0) {
-    alert("Please enter valid name, price and quantity.");
-    return;
-  }
-  const res = await fetch(apiBase, {
+  const price = +document.getElementById("price").value;
+  const quantity = +document.getElementById("quantity").value;
+
+  const res = await fetch(apiUrl, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, price, quantity })
   });
+
   if (res.ok) {
-    alert("Product added");
-    document.getElementById("name").value = "";
-    document.getElementById("price").value = "";
-    document.getElementById("quantity").value = "";
     fetchProducts();
+    e.target.reset();
   } else {
     alert("Failed to add product");
   }
-}
+});
 
-function startEdit(id, name, price, quantity) {
-  document.getElementById("editId").value = id;
-  document.getElementById("editName").value = name;
-  document.getElementById("editPrice").value = price;
-  document.getElementById("editQuantity").value = quantity;
-  window.scrollTo(0, document.body.scrollHeight);
-}
+async function editProduct(id, currentName, currentPrice, currentQuantity) {
+  const name = prompt("Edit Product Name:", currentName);
+  if (name === null) return;
+  const price = prompt("Edit Price:", currentPrice);
+  if (price === null) return;
+  const quantity = prompt("Edit Quantity:", currentQuantity);
+  if (quantity === null) return;
 
-async function updateProduct() {
-  const id = document.getElementById("editId").value;
-  const name = document.getElementById("editName").value.trim();
-  const price = Number(document.getElementById("editPrice").value);
-  const quantity = Number(document.getElementById("editQuantity").value);
-  if (!id || !name || price <= 0 || quantity <= 0) {
-    alert("Please fill valid data to update");
-    return;
-  }
-  const res = await fetch(`${apiBase}/${id}`, {
+  const res = await fetch(`${apiUrl}/${id}`, {
     method: "PUT",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ name, price, quantity })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      price: Number(price),
+      quantity: Number(quantity),
+      total: Number(price) * Number(quantity)
+    })
   });
+
   if (res.ok) {
-    alert("Product updated");
-    document.getElementById("editId").value = "";
-    document.getElementById("editName").value = "";
-    document.getElementById("editPrice").value = "";
-    document.getElementById("editQuantity").value = "";
     fetchProducts();
   } else {
     alert("Update failed");
   }
 }
 
-function startSell(id) {
-  document.getElementById("sellId").value = id;
-  document.getElementById("sellNote").value = "";
-  window.scrollTo(0, document.body.scrollHeight);
-}
-
-async function sellProduct() {
-  const id = document.getElementById("sellId").value;
-  const sellNote = document.getElementById("sellNote").value.trim();
-
-  if (!id) {
-    alert("Select a product to sell");
-    return;
-  }
-
-  const res = await fetch(`${apiBase}/${id}/sell`, {
+async function sellProduct(id) {
+  const sellNote = prompt("Enter selling note (optional):", "");
+  const res = await fetch(`${apiUrl}/${id}/sell`, {
     method: "PUT",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sellNote })
   });
 
   if (res.ok) {
-    alert("Product sold");
-    document.getElementById("sellId").value = "";
-    document.getElementById("sellNote").value = "";
     fetchProducts();
   } else {
     alert("Sell failed");
   }
 }
 
-// প্রথমে লোড হওয়ার সময় প্রোডাক্টগুলো দেখাবে
+// Initial load
 fetchProducts();
 </script>
 
