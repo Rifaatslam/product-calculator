@@ -19,7 +19,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ DB Error:", err));
 
-// POST: Add a new product
+// POST: Add new product
 app.post("/api/products", async (req, res) => {
   const { name, price, quantity } = req.body;
   const total = price * quantity;
@@ -33,13 +33,13 @@ app.post("/api/products", async (req, res) => {
   }
 });
 
-// GET: All products
+// GET: Get all products
 app.get("/api/products", async (req, res) => {
   const products = await Product.find().sort({ createdAt: -1 });
   res.json(products);
 });
 
-// PUT: Update product info (edit)
+// PUT: Update product (edit)
 app.put("/api/products/:id", async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -49,7 +49,7 @@ app.put("/api/products/:id", async (req, res) => {
   }
 });
 
-// PUT: Mark product as sold (sell)
+// PUT: Sell product (mark sold)
 app.put("/api/products/:id/sell", async (req, res) => {
   const { sellNote } = req.body;
 
@@ -59,7 +59,6 @@ app.put("/api/products/:id/sell", async (req, res) => {
       sellDate: new Date(),
       sellNote
     }, { new: true });
-
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: "Sell failed" });
