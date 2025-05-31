@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ এই root route যোগ করা হয়েছে
+// Root route
 app.get("/", (req, res) => {
   res.send("🚀 Product Calculator API is live!");
 });
@@ -37,6 +37,33 @@ app.post("/api/products", async (req, res) => {
 app.get("/api/products", async (req, res) => {
   const products = await Product.find().sort({ createdAt: -1 });
   res.json(products);
+});
+
+// PUT: Update product info (edit)
+app.put("/api/products/:id", async (req, res) => {
+  try {
+    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+// PUT: Mark product as sold (sell)
+app.put("/api/products/:id/sell", async (req, res) => {
+  const { sellNote } = req.body;
+
+  try {
+    const updated = await Product.findByIdAndUpdate(req.params.id, {
+      sold: true,
+      sellDate: new Date(),
+      sellNote
+    }, { new: true });
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Sell failed" });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
