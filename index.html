@@ -3,62 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Product Calculator</title>
+  <title>🧮 Product Calculator</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, button { padding: 8px; margin: 5px; }
-    .product { border-bottom: 1px solid #ccc; margin: 5px 0; padding: 5px 0; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    input {
+      display: block;
+      margin-bottom: 10px;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .product {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
-  <h1>🛒 Product Calculator</h1>
 
-  <input id="name" placeholder="Product Name" />
-  <input id="price" placeholder="Price" type="number" />
-  <input id="quantity" placeholder="Quantity" type="number" />
-  <button onclick="addProduct()">Add Product</button>
+  <h1>🧮 Product Calculator</h1>
 
-  <h2>📦 Product List</h2>
+  <form id="productForm">
+    <input type="text" id="name" placeholder="Product Name" required />
+    <input type="number" id="price" placeholder="Price" required />
+    <input type="number" id="quantity" placeholder="Quantity" required />
+    <button type="submit">Add Product</button>
+  </form>
+
   <div id="products"></div>
 
   <script>
-    const API = "http://localhost:5000/api/products";
+    const API = 'https://product-calculator-1-wopp.onrender.com/api/products';
 
-    async function addProduct() {
+    async function fetchProducts() {
+      const res = await fetch(API);
+      const data = await res.json();
+      const productsDiv = document.getElementById("products");
+      productsDiv.innerHTML = '';
+      data.forEach(p => {
+        const div = document.createElement("div");
+        div.className = 'product';
+        div.innerHTML = `
+          <strong>${p.name}</strong><br>
+          Price: ${p.price} | Qty: ${p.quantity} | Total: ${p.total}
+        `;
+        productsDiv.appendChild(div);
+      });
+    }
+
+    document.getElementById("productForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
       const name = document.getElementById("name").value;
-      const price = parseFloat(document.getElementById("price").value);
-      const quantity = parseInt(document.getElementById("quantity").value);
+      const price = document.getElementById("price").value;
+      const quantity = document.getElementById("quantity").value;
 
-      const res = await fetch(API, {
+      await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, price, quantity }),
       });
 
-      document.getElementById("name").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("quantity").value = "";
+      e.target.reset();
+      fetchProducts();
+    });
 
-      loadProducts();
-    }
-
-    async function loadProducts() {
-      const res = await fetch(API);
-      const data = await res.json();
-      const container = document.getElementById("products");
-      container.innerHTML = "";
-
-      data.forEach(p => {
-        container.innerHTML += `
-          <div class="product">
-            <strong>${p.name}</strong><br>
-            Price: ৳${p.price} × ${p.quantity} = <strong>৳${p.total}</strong>
-          </div>
-        `;
-      });
-    }
-
-    loadProducts();
+    fetchProducts();
   </script>
+
 </body>
 </html>
